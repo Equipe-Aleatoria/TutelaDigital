@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutela Digital — MVP</title>
+<style>
+:root{--green:#176b48;--ink:#1b2b22;--muted:#65736b;--line:#dce5df;--bg:#f4f8f5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Arial,sans-serif}
+header{background:#123f2e;color:white;padding:24px 18px}header>div,main{max-width:960px;margin:auto}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.13em;opacity:.8}h1{font-size:clamp(28px,5vw,40px);margin:5px 0}header p{margin:0;color:#dcebe1}
+main{padding:20px 14px 40px}.warning{padding:12px;background:#fff2d6;border:1px solid #ecd69b;border-radius:10px;margin-bottom:18px;font-size:14px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}button{font:inherit;font-weight:650;border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.tab{background:white;border:1px solid var(--line)}.tab.active,.primary{background:var(--green);color:white}.secondary{background:#edf2ee;color:var(--ink)}.danger{background:#fbe9e9;color:#a22}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}.card{background:white;border:1px solid var(--line);border-radius:15px;padding:20px;box-shadow:0 4px 16px #123f2e0a}
+h2{font-size:21px;margin:0 0 4px}.muted{color:var(--muted);font-size:14px;margin:0 0 16px}
+label{display:block;font-size:14px;font-weight:650;margin:12px 0 5px}input{width:100%;padding:12px;border:1px solid #bdcec2;border-radius:8px;font:inherit}
+.wide{width:100%;margin-top:15px}.status{padding:12px;border-radius:9px;margin:12px 0;font-weight:650}.pending{background:#fff2d6;color:#805500}.approved{background:#e7f5ec;color:#176b48}.rejected{background:#fbe9e9;color:#a22}
+.details{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.row{display:flex;justify-content:space-between;gap:12px;padding:6px 0}.row span{color:var(--muted)}.row strong{text-align:right;overflow-wrap:anywhere}
+.actions{display:flex;gap:8px;margin-top:14px}.actions button{flex:1}.empty{border:1px dashed #bdcec2;border-radius:10px;padding:18px;color:var(--muted);text-align:center}.hidden{display:none!important}.fine{font-size:12px;color:var(--muted);text-align:center;margin-top:22px}
+@media(max-width:450px){.card{padding:16px}.actions{flex-direction:column}}
+</style>
+</head>
+<body>
+<header><div><div class="kicker">Protótipo de hackathon</div><h1>🛡️ Tutela Digital</h1><p>Autonomia financeira com uma camada extra de proteção.</p></div></header>
+<main>
+<div class="warning"><strong>Demonstração:</strong> use apenas dados fictícios. Este MVP não se conecta a bancos e não realiza transferências PIX reais.</div>
+<nav><button id="tabUser" class="tab active" onclick="show('user')">👤 Pessoa usuária</button><button id="tabGuardian" class="tab" onclick="show('guardian')">🛡️ Responsável</button></nav>
+<section id="userView" class="grid">
+ <div class="card">
+  <h2>Solicitar PIX</h2><p class="muted">O pedido ficará pendente até a decisão do responsável.</p>
+  <form id="pixForm">
+   <label for="recipient">Nome do destinatário</label><input id="recipient" required maxlength="80" placeholder="Ex.: Maria da Silva">
+   <label for="pixkey">Chave PIX fictícia</label><input id="pixkey" required maxlength="100" placeholder="Ex.: maria@email.com">
+   <label for="amount">Valor (R$)</label><input id="amount" type="number" min="0.01" max="100000" step="0.01" required placeholder="150,00">
+   <label for="reason">Motivo (opcional)</label><input id="reason" maxlength="140" placeholder="Ex.: pagamento de conta">
+   <button class="primary wide" type="submit">Solicitar autorização</button>
+  </form>
+ </div>
+ <div class="card"><h2>Estado da solicitação</h2><p class="muted">O status muda quando o responsável toma uma decisão.</p>
+  <div id="userStatus" class="empty">Nenhuma solicitação ainda.</div><div id="userDetails" class="details hidden"></div>
+  <button class="secondary wide" onclick="resetDemo()">Reiniciar demonstração</button>
+ </div>
+</section>
+<section id="guardianView" class="grid hidden">
+ <div class="card"><h2>Painel do responsável</h2><p class="muted">Confira os dados antes de decidir.</p><div id="guardianContent" class="empty">Nenhuma solicitação aguardando análise.</div></div>
+ <div class="card"><h2>Regra de proteção</h2><div class="status pending">⏸️ Pendente = transferência não executada</div><p>Em um sistema real, seriam necessários identidade verificada, autenticação forte, registro de auditoria e integração autorizada com uma instituição financeira.</p><p class="muted">Esta tela simula a decisão do responsável; não representa tutela legal formal.</p></div>
+</section>
+<p class="fine">Tutela Digital · MVP de validação · Nenhum dinheiro é movimentado</p>
+</main>
+<script>
+let request=null;
+const money=n=>Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function show(view){
+ document.getElementById('userView').classList.toggle('hidden',view!=='user');
+ document.getElementById('guardianView').classList.toggle('hidden',view!=='guardian');
+ document.getElementById('tabUser').classList.toggle('active',view==='user');
+ document.getElementById('tabGuardian').classList.toggle('active',view==='guardian');
+ render();
+}
+document.getElementById('pixForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ if(request&&request.status==='Pendente'){alert('Já existe uma solicitação pendente. Analise-a primeiro.');return}
+ request={recipient:document.getElementById('recipient').value.trim(),pixkey:document.getElementById('pixkey').value.trim(),amount:Number(document.getElementById('amount').value),reason:document.getElementById('reason').value.trim(),status:'Pendente',created:new Date().toLocaleString('pt-BR')};
+ render();show('user');
+});
+function decide(status){if(!request||request.status!=='Pendente')return;request.status=status;request.decided=new Date().toLocaleString('pt-BR');render()}
+function rows(){return `<div class="details"><div class="row"><span>Destinatário</span><strong>${esc(request.recipient)}</strong></div><div class="row"><span>Chave PIX</span><strong>${esc(request.pixkey)}</strong></div><div class="row"><span>Valor</span><strong>${money(request.amount)}</strong></div><div class="row"><span>Motivo</span><strong>${esc(request.reason||'Não informado')}</strong></div><div class="row"><span>Solicitado em</span><strong>${esc(request.created)}</strong></div>${request.decided?`<div class="row"><span>Decisão em</span><strong>${esc(request.decided)}</strong></div>`:''}</div>`}
+function render(){
+ const us=document.getElementById('userStatus'),ud=document.getElementById('userDetails'),gc=document.getElementById('guardianContent');
+ if(!request){us.className='empty';us.textContent='Nenhuma solicitação ainda.';ud.classList.add('hidden');ud.innerHTML='';gc.className='empty';gc.textContent='Nenhuma solicitação aguardando análise.';return}
+ const cls=request.status==='Pendente'?'pending':request.status==='Autorizado'?'approved':'rejected';
+ us.className='status '+cls;us.textContent=request.status==='Pendente'?'⏸️ PIX bloqueado — aguardando autorização':request.status==='Autorizado'?'✓ Solicitação autorizada (simulação)':'✕ Solicitação rejeitada';
+ ud.classList.remove('hidden');ud.innerHTML=rows()+`<p class="muted">${request.status==='Pendente'?'Nenhum PIX foi enviado.':request.status==='Autorizado'?'Autorização registrada no protótipo. Nenhum PIX real foi enviado.':'Solicitação recusada. Nenhum PIX foi enviado.'}</p>`;
+ if(request.status==='Pendente'){gc.className='';gc.innerHTML='<div class="status pending">⏳ Aguardando sua decisão</div>'+rows()+'<div class="actions"><button class="primary" onclick="decide(\\'Autorizado\\')">Autorizar</button><button class="danger" onclick="decide(\\'Rejeitado\\')">Rejeitar</button></div>'}
+ else{gc.className='';gc.innerHTML=`<div class="status ${cls}">${request.status==='Autorizado'?'✓ Autorizado':'✕ Rejeitado'}</div>`+rows()+'<button class="secondary wide" onclick="show(\\'user\\')">Voltar à pessoa usuária</button>'}
+}
+function resetDemo(){request=null;document.getElementById('pixForm').reset();render();show('user')}
+render();
+</script>
+</body>
+</html>
