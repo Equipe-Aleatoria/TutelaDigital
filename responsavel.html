@@ -1,0 +1,272 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Área do Responsável | Tutela Digital</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #172b4d;
+    }
+
+    main {
+      max-width: 850px;
+      margin: 0 auto;
+    }
+
+    h1 { color: #155eef; }
+
+    .aviso {
+      padding: 14px;
+      border-radius: 10px;
+      background: #fff4d6;
+      color: #795600;
+      line-height: 1.5;
+    }
+
+    .pedido {
+      margin-top: 16px;
+      padding: 20px;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 4px 18px #172b4d0d;
+    }
+
+    .pedido h2 { margin-top: 0; }
+
+    .status {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 20px;
+      background: #fff0c2;
+      color: #795600;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .aprovado {
+      background: #d9fbe7;
+      color: #17663a;
+    }
+
+    .rejeitado {
+      background: #ffe1e1;
+      color: #a12222;
+    }
+
+    .acoes {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    button, .voltar {
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
+    .aprovar { background: #16794b; color: white; }
+    .rejeitar { background: #b42318; color: white; }
+
+    .voltar {
+      display: inline-block;
+      margin-top: 20px;
+      background: #e1eaff;
+      color: #172b4d;
+    }
+
+    .vazio {
+      padding: 24px;
+      text-align: center;
+      background: white;
+      border-radius: 12px;
+    }
+
+    #mensagem {
+      margin-top: 16px;
+      font-weight: bold;
+    }
+
+    small { color: #667085; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Área do Responsável</h1>
+    <p>Consulte os pedidos de PIX e registre sua decisão.</p>
+
+    <div class="aviso">
+      Protótipo demonstrativo: os pedidos e as decisões são
+      armazenados no Supabase. Nenhuma transferência financeira
+      é realizada.
+    </div>
+
+    <p id="mensagem" role="status"></p>
+    <section id="lista" aria-live="polite"></section>
+
+    <a class="voltar" href="index.html">Voltar ao início</a>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    const lista = document.getElementById('lista');
+    const mensagem = document.getElementById('mensagem');
+
+    function adicionarDetalhe(card, texto) {
+      const p = document.createElement('p');
+      p.textContent = texto;
+      card.appendChild(p);
+    }
+
+    async function carregarSolicitacoes() {
+      mensagem.textContent = 'Carregando solicitações...';
+      lista.replaceChildren();
+
+      const { data: usuario, error: erroUsuario } =
+        await supabaseClient.auth.getUser();
+
+      if (erroUsuario || !usuario.user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const { data: solicitacoes, error } = await supabaseClient
+        .from('solicitacoes')
+        .select('id, destinatario, chave_pix, valor, motivo, status, criado_em')
+        .eq('responsavel_id', usuario.user.id)
+        .order('criado_em', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar:', error);
+        mensagem.textContent = 'Erro ao carregar solicitações.';
+        return;
+      }
+
+      mensagem.textContent = '';
+
+      if (!solicitacoes || solicitacoes.length === 0) {
+        const vazio = document.createElement('p');
+        vazio.className = 'vazio';
+        vazio.textContent = 'Nenhuma solicitação recebida até o momento.';
+        lista.appendChild(vazio);
+        return;
+      }
+
+      solicitacoes.forEach((pedido) => {
+        const card = document.createElement('article');
+        card.className = 'pedido';
+
+        const titulo = document.createElement('h2');
+        titulo.textContent = 'PIX para ' + pedido.destinatario;
+        card.appendChild(titulo);
+
+        const status = document.createElement('span');
+        status.className = 'status';
+
+        if (pedido.status === 'Aprovado') {
+          status.classList.add('aprovado');
+        }
+
+        if (pedido.status === 'Rejeitado') {
+          status.classList.add('rejeitado');
+        }
+
+        status.textContent = pedido.status;
+        card.appendChild(status);
+
+        const valor = Number(pedido.valor).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        });
+
+        adicionarDetalhe(card, 'Valor: ' + valor);
+        adicionarDetalhe(card, 'Chave PIX: ' + pedido.chave_pix);
+        adicionarDetalhe(card, 'Motivo: ' + (pedido.motivo || 'Não informado'));
+        adicionarDetalhe(
+          card,
+          'Data: ' + new Date(pedido.criado_em).toLocaleString('pt-BR')
+        );
+
+        if (pedido.status === 'Pendente') {
+          const acoes = document.createElement('div');
+          acoes.className = 'acoes';
+
+          const aprovar = document.createElement('button');
+          aprovar.className = 'aprovar';
+          aprovar.textContent = 'Aprovar';
+
+          const rejeitar = document.createElement('button');
+          rejeitar.className = 'rejeitar';
+          rejeitar.textContent = 'Rejeitar';
+
+          async function executarDecisao(decisao) {
+            aprovar.disabled = true;
+            rejeitar.disabled = true;
+
+            await decidir(pedido.id, decisao);
+
+            aprovar.disabled = false;
+            rejeitar.disabled = false;
+          }
+
+          aprovar.addEventListener('click', () => {
+            executarDecisao('Aprovado');
+          });
+
+          rejeitar.addEventListener('click', () => {
+            executarDecisao('Rejeitado');
+          });
+
+          acoes.append(aprovar, rejeitar);
+          card.appendChild(acoes);
+        }
+
+        lista.appendChild(card);
+      });
+    }
+
+    async function decidir(id, decisao) {
+      mensagem.textContent = 'Registrando decisão...';
+
+      const { error } = await supabaseClient.rpc(
+        'decidir_solicitacao',
+        {
+          p_id: id,
+          p_decisao: decisao
+        }
+      );
+
+      if (error) {
+        console.error('Erro ao decidir:', error);
+        mensagem.textContent = 'Não foi possível registrar a decisão.';
+        return;
+      }
+
+      await carregarSolicitacoes();
+      mensagem.textContent = 'Decisão registrada com sucesso!';
+    }
+
+    carregarSolicitacoes();
+  </script>
+</body>
+</html>

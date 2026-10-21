@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar PIX | Tutela Digital</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #172b4d;
+    }
+
+    main {
+      width: 100%;
+      max-width: 460px;
+      padding: 30px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 8px 30px #172b4d12;
+    }
+
+    h1 { color: #155eef; }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: bold;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid #ccd5e2;
+      border-radius: 8px;
+      font: inherit;
+    }
+
+    button, .voltar {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      border: 0;
+      border-radius: 9px;
+      background: #155eef;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .voltar {
+      background: #eaf0fb;
+      color: #172b4d;
+    }
+
+    #mensagem {
+      margin-top: 18px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Solicitar PIX</h1>
+    <p>Preencha os dados para enviar uma solicitação ao responsável.</p>
+
+    <form id="formulario">
+      <label for="destinatario">Nome do destinatário</label>
+      <input id="destinatario" name="destinatario" required
+             placeholder="Ex.: João da Silva">
+
+      <label for="chave">Chave PIX fictícia</label>
+      <input id="chave" name="chave" required
+             placeholder="Use uma chave de teste">
+
+      <label for="valor">Valor (R$)</label>
+      <input id="valor" name="valor" type="number"
+             min="0.01" max="100000" step="0.01" required
+             placeholder="0,00">
+
+      <label for="motivo">Motivo da solicitação</label>
+      <textarea id="motivo" name="motivo" rows="3" required
+                placeholder="Por que precisa fazer esse PIX?"></textarea>
+
+      <button type="submit">Enviar para autorização</button>
+    </form>
+
+    <p id="mensagem" role="status"></p>
+
+    <a class="voltar" href="index.html">Voltar ao início</a>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase.js"></script>
+ <script>
+  document.getElementById('formulario').addEventListener(
+    'submit',
+    async function (event) {
+      event.preventDefault();
+
+      const mensagem = document.getElementById('mensagem');
+      mensagem.textContent = 'Enviando solicitação...';
+
+      // Identificar o solicitante autenticado
+      const { data: usuario, error: erroUsuario } =
+        await supabaseClient.auth.getUser();
+
+      if (erroUsuario || !usuario.user) {
+        mensagem.textContent = 'Faça login para continuar.';
+        return;
+      }
+
+      // Descobrir o responsável vinculado
+      const { data: vinculo, error: erroVinculo } =
+        await supabaseClient
+          .from('vinculos')
+          .select('responsavel_id')
+          .eq('solicitante_id', usuario.user.id)
+          .limit(1)
+          .maybeSingle();
+
+      if (erroVinculo || !vinculo) {
+        mensagem.textContent =
+          'Nenhum responsável vinculado à sua conta.';
+        console.error(erroVinculo);
+        return;
+      }
+
+      // Criar a solicitação no Supabase
+      const { error: erroPedido } = await supabaseClient
+        .from('solicitacoes')
+        .insert({
+          solicitante_id: usuario.user.id,
+          responsavel_id: vinculo.responsavel_id,
+          destinatario: document.getElementById('destinatario').value.trim(),
+          chave_pix: document.getElementById('chave').value.trim(),
+          valor: Number(document.getElementById('valor').value),
+          motivo: document.getElementById('motivo').value.trim()
+        });
+
+      if (erroPedido) {
+        mensagem.textContent = 'Erro ao enviar a solicitação.';
+        console.error(erroPedido);
+        return;
+      }
+
+      mensagem.textContent =
+        'Solicitação enviada ao responsável com sucesso!';
+
+      this.reset();
+    }
+  );
+</script>
+
+<script>
+  async function verificarUsuario() {
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error || !data.user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    console.log("Usuário autenticado:", data.user.id);
+  }
+
+console.log("Teste: script de autenticação carregado");
+verificarUsuario();
+</script>
+</body>
+</html>

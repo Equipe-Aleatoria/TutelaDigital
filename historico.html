@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minhas Solicitações | Tutela Digital</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #172b4d;
+      margin: 0;
+      padding: 24px;
+    }
+
+    main {
+      max-width: 750px;
+      margin: auto;
+    }
+
+    h1 { color: #155eef; }
+
+    .pedido {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 16px 0;
+      box-shadow: 0 4px 18px #172b4d0d;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 7px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      background: #fff0c2;
+      color: #795600;
+    }
+
+    .Aprovado {
+      background: #d9fbe7;
+      color: #17663a;
+    }
+
+    .Rejeitado {
+      background: #ffe1e1;
+      color: #a12222;
+    }
+
+    a {
+      display: inline-block;
+      padding: 12px 18px;
+      background: #155eef;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Minhas solicitações</h1>
+    <p>Acompanhe as decisões do seu responsável.</p>
+
+    <p id="mensagem">Carregando...</p>
+    <section id="lista"></section>
+
+    <a href="index.html">Voltar ao início</a>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    async function carregarHistorico() {
+      const mensagem = document.getElementById('mensagem');
+      const lista = document.getElementById('lista');
+
+      const { data: usuario, error: erroUsuario } =
+        await supabaseClient.auth.getUser();
+
+      if (erroUsuario || !usuario.user) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const { data: pedidos, error } = await supabaseClient
+        .from('solicitacoes')
+        .select('destinatario, valor, motivo, status, criado_em')
+        .eq('solicitante_id', usuario.user.id)
+        .order('criado_em', { ascending: false });
+
+      if (error) {
+        mensagem.textContent = 'Erro ao carregar solicitações.';
+        console.error(error);
+        return;
+      }
+
+      mensagem.textContent = pedidos.length
+        ? ''
+        : 'Você ainda não fez nenhuma solicitação.';
+
+      lista.replaceChildren();
+
+      pedidos.forEach((pedido) => {
+        const card = document.createElement('article');
+        card.className = 'pedido';
+
+        const titulo = document.createElement('h2');
+        titulo.textContent = 'PIX para ' + pedido.destinatario;
+
+        const valor = document.createElement('p');
+        valor.textContent = 'Valor: ' +
+          Number(pedido.valor).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          });
+
+        const motivo = document.createElement('p');
+        motivo.textContent = 'Motivo: ' + (pedido.motivo || 'Não informado');
+
+        const data = document.createElement('p');
+        data.textContent = 'Data: ' +
+          new Date(pedido.criado_em).toLocaleString('pt-BR');
+
+        const status = document.createElement('span');
+        status.className = 'status';
+
+        if (pedido.status === 'Aprovado' ||
+            pedido.status === 'Rejeitado') {
+          status.classList.add(pedido.status);
+        }
+
+        status.textContent = pedido.status;
+
+        card.append(titulo, valor, motivo, data, status);
+        lista.appendChild(card);
+      });
+    }
+
+    carregarHistorico();
+  </script>
+</body>
+</html>

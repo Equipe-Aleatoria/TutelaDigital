@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login | Tutela Digital</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f6fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .caixa {
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      width: 320px;
+      max-width: 85%;
+      box-shadow: 0 4px 20px #00000015;
+    }
+    h1 { color: #17365d; }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+    }
+    input { border: 1px solid #ccc; }
+    button {
+      background: #17365d;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover { background: #28548a; }
+    #mensagem { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main class="caixa">
+    <h1>Tutela Digital</h1>
+    <p>Entre ou crie sua conta.</p>
+
+    <input type="email" id="email" placeholder="Seu e-mail">
+    <input type="password" id="senha" placeholder="Sua senha">
+
+    <button onclick="entrar()">Entrar</button>
+    <button onclick="cadastrar()">Criar conta</button>
+
+    <p id="mensagem"></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    const mensagem = document.getElementById("mensagem");
+
+    async function entrar() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("senha").value;
+
+      const { error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        mensagem.textContent = error.message;
+        return;
+      }
+
+      window.location.href = "index.html";
+    }
+
+    async function cadastrar() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("senha").value;
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password
+      });
+
+      if (error) {
+        mensagem.textContent = error.message;
+        return;
+      }
+
+      mensagem.textContent = data.session
+        ? "Conta criada com sucesso!"
+        : "Cadastro recebido! Verifique seu e-mail para confirmar a conta.";
+    }
+  </script>
+</body>
+</html>

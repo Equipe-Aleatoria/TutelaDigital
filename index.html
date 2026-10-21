@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutela Digital</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #172b4d;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 420px;
+      padding: 32px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 8px 30px #172b4d12;
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #155eef;
+    }
+
+    p {
+      line-height: 1.6;
+      color: #52627a;
+    }
+
+    .usuario {
+      font-size: 13px;
+      overflow-wrap: anywhere;
+      background: #f3f6fb;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    a, button {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: #155eef;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font: inherit;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    a:hover, button:hover {
+      background: #1249bd;
+    }
+
+    .secundario {
+      background: #eaf0fb;
+      color: #172b4d;
+    }
+
+    .secundario:hover {
+      background: #dce6f8;
+    }
+
+    .sair {
+      background: #fff0f0;
+      color: #a12222;
+    }
+
+    .sair:hover {
+      background: #ffe1e1;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Tutela Digital</h1>
+
+    <p>
+      Uma camada de proteção para solicitações de PIX,
+      com autorização de um responsável.
+    </p>
+
+    <p id="usuario" class="usuario">
+      Verificando sua sessão...
+    </p>
+
+    <nav>
+      <a href="solicitacao.html">Solicitar PIX</a>
+      <a href="historico.html">Minhas solicitações</a>
+      <a href="responsavel.html">Área do responsável</a>
+    </nav>
+
+    <button id="sair" class="sair" type="button">
+      Sair da conta
+    </button>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase.js"></script>
+
+  <script>
+    const elementoUsuario = document.getElementById('usuario');
+
+    async function verificarSessao() {
+      const { data, error } = await supabaseClient.auth.getUser();
+
+      if (error || !data.user) {
+        window.location.replace('login.html');
+        return;
+      }
+
+      elementoUsuario.textContent =
+        'Conectado como: ' + data.user.email;
+    }
+
+    document.getElementById('sair').addEventListener(
+      'click',
+      async function () {
+        this.disabled = true;
+        this.textContent = 'Saindo...';
+
+        const { error } = await supabaseClient.auth.signOut();
+
+        if (error) {
+          alert('Não foi possível sair da conta.');
+          this.disabled = false;
+          this.textContent = 'Sair da conta';
+          return;
+        }
+
+        window.location.replace('login.html');
+      }
+    );
+
+    verificarSessao();
+  </script>
+</body>
+</html>
