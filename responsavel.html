@@ -244,27 +244,151 @@
         lista.appendChild(card);
       });
     }
+function abrirTecladoVirtual() {
+  return new Promise((resolver) => {
+    const pares = ['0 ou 5', '1 ou 6', '2 ou 7', '3 ou 8', '4 ou 9'];
+    const embaralhados = [...pares].sort(() => Math.random() - 0.5);
 
-    async function decidir(id, decisao) {
-      mensagem.textContent = 'Registrando decisão...';
+    let digitados = 0;
 
-      const { error } = await supabaseClient.rpc(
-        'decidir_solicitacao',
-        {
-          p_id: id,
-          p_decisao: decisao
-        }
-      );
+    const fundo = document.createElement('div');
+    fundo.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    `;
 
-      if (error) {
-        console.error('Erro ao decidir:', error);
-        mensagem.textContent = 'Não foi possível registrar a decisão.';
-        return;
-      }
+    const painel = document.createElement('div');
+    painel.style.cssText = `
+      background: white;
+      padding: 28px;
+      border-radius: 16px;
+      width: 320px;
+      max-width: 90vw;
+      text-align: center;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    `;
 
-      await carregarSolicitacoes();
-      mensagem.textContent = 'Decisão registrada com sucesso!';
+    const titulo = document.createElement('h2');
+    titulo.textContent = 'Senha de autorização';
+
+    const aviso = document.createElement('p');
+    aviso.textContent = 'Simulação: selecione seis teclas para confirmar.';
+    aviso.style.fontSize = '13px';
+
+    const visor = document.createElement('p');
+    visor.textContent = '○ ○ ○ ○ ○ ○';
+    visor.style.fontSize = '24px';
+
+    const teclado = document.createElement('div');
+    teclado.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    `;
+
+    const confirmar = document.createElement('button');
+    confirmar.textContent = 'Confirmar';
+    confirmar.disabled = true;
+
+    function atualizarVisor() {
+      visor.textContent =
+        '● '.repeat(digitados) +
+        '○ '.repeat(6 - digitados);
+
+      confirmar.disabled = digitados !== 6;
     }
+
+    embaralhados.forEach((par) => {
+      const tecla = document.createElement('button');
+      tecla.textContent = par;
+      tecla.style.cssText = `
+        padding: 16px;
+        font-size: 18px;
+        border: 1px solid #ccd5e0;
+        border-radius: 10px;
+        cursor: pointer;
+        background: #f0f5fa;
+      `;
+
+      tecla.onclick = () => {
+        if (digitados < 6) {
+          digitados++;
+          atualizarVisor();
+        }
+      };
+
+      teclado.appendChild(tecla);
+    });
+
+    const apagar = document.createElement('button');
+    apagar.textContent = 'Apagar';
+    apagar.onclick = () => {
+      if (digitados > 0) {
+        digitados--;
+        atualizarVisor();
+      }
+    };
+
+    const cancelar = document.createElement('button');
+    cancelar.textContent = 'Cancelar';
+
+    function fechar(resultado) {
+      fundo.remove();
+      resolver(resultado);
+    }
+
+    cancelar.onclick = () => fechar(false);
+    confirmar.onclick = () => fechar(true);
+
+    painel.append(
+      titulo,
+      aviso,
+      visor,
+      teclado,
+      apagar,
+      confirmar,
+      cancelar
+    );
+
+    fundo.appendChild(painel);
+    document.body.appendChild(fundo);
+  });
+}
+    async function decidir(id, decisao) {
+  if (decisao === 'Aprovado') {
+    const autorizado = await abrirTecladoVirtual();
+
+    if (!autorizado) {
+      mensagem.textContent = 'Autorização cancelada.';
+      return;
+    }
+  }
+
+  mensagem.textContent = 'Registrando decisão...';
+
+  const { error } = await supabaseClient.rpc(
+    'decidir_solicitacao',
+    {
+      p_id: id,
+      p_decisao: decisao
+    }
+  );
+
+  if (error) {
+    console.error('Erro ao decidir:', error);
+    mensagem.textContent = 'Não foi possível registrar a decisão.';
+    return;
+  }
+
+  await carregarSolicitacoes();
+  mensagem.textContent = 'Decisão registrada com sucesso!';
+}
 
     carregarSolicitacoes();
   </script>

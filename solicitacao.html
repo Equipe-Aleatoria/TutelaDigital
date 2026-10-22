@@ -137,7 +137,13 @@
         console.error(erroVinculo);
         return;
       }
+// Exibir teclado virtual antes de enviar o PIX fictício
+const confirmado = await abrirTecladoVirtual();
 
+if (!confirmado) {
+  mensagem.textContent = 'Envio cancelado.';
+  return;
+}
       // Criar a solicitação no Supabase
       const { error: erroPedido } = await supabaseClient
         .from('solicitacoes')
@@ -162,6 +168,169 @@
       this.reset();
     }
   );
+  function abrirTecladoVirtual() {
+  return new Promise((resolver) => {
+    const pares = [
+      '0 ou 5',
+      '1 ou 6',
+      '2 ou 7',
+      '3 ou 8',
+      '4 ou 9'
+    ];
+
+    // Embaralhamento dos pares
+    for (let i = pares.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pares[i], pares[j]] = [pares[j], pares[i]];
+    }
+
+    let digitados = 0;
+
+    const fundo = document.createElement('div');
+    fundo.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    `;
+
+    const painel = document.createElement('div');
+painel.style.cssText = `
+  background: #ffffff;
+  color: #142b49;
+  padding: 32px 24px;
+  border-radius: 22px;
+  width: 380px;
+  max-width: 94vw;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.4);
+  border: 2px solid #dce6f2;
+  font-family: Arial, sans-serif;
+`;
+
+    const titulo = document.createElement('h2');
+    titulo.textContent = 'Confirmação do PIX';
+
+    const aviso = document.createElement('p');
+    aviso.textContent =
+      'Simulação: selecione seis teclas para confirmar o envio.';
+    aviso.style.fontSize = '13px';
+
+    const visor = document.createElement('p');
+    visor.style.cssText = 'font-size: 24px; margin: 20px 0;';
+
+    const teclado = document.createElement('div');
+    teclado.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    `;
+
+    const confirmar = document.createElement('button');
+    confirmar.type = 'button';
+    confirmar.textContent = 'Confirmar envio';
+    confirmar.disabled = true;
+
+    confirmar.style.cssText = `
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: bold;
+  color: white;
+  background: #087f5b;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+`;
+
+    function atualizarVisor() {
+      visor.textContent =
+        '● '.repeat(digitados) +
+        '○ '.repeat(6 - digitados);
+
+      confirmar.disabled = digitados !== 6;
+    }
+
+    pares.forEach((par) => {
+      const tecla = document.createElement('button');
+      tecla.type = 'button';
+      tecla.textContent = par;
+      tecla.style.cssText = `
+  min-height: 82px;
+  padding: 18px 12px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #173b75;
+  border: 2px solid #315b98;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #0c244b;
+`;
+
+      tecla.onclick = () => {
+        if (digitados < 6) {
+          digitados++;
+          atualizarVisor();
+        }
+      };
+
+      teclado.appendChild(tecla);
+    });
+
+    const apagar = document.createElement('button');
+    apagar.type = 'button';
+    apagar.textContent = 'Apagar';
+    apagar.onclick = () => {
+      if (digitados > 0) {
+        digitados--;
+        atualizarVisor();
+      }
+    };
+
+    const cancelar = document.createElement('button');
+    cancelar.type = 'button';
+    cancelar.textContent = 'Cancelar';
+    cancelar.style.cssText = `
+  margin: 12px 8px;
+  padding: 10px 18px;
+  font-size: 15px;
+  color: #173b75;
+  background: #edf2f8;
+  border: 1px solid #ccd5e0;
+  border-radius: 10px;
+  cursor: pointer;
+`;
+
+    function fechar(resultado) {
+      fundo.remove();
+      resolver(resultado);
+    }
+
+    cancelar.onclick = () => fechar(false);
+    confirmar.onclick = () => fechar(true);
+
+    atualizarVisor();
+
+    painel.append(
+      titulo,
+      aviso,
+      visor,
+      teclado,
+      apagar,
+      confirmar,
+      cancelar
+    );
+
+    fundo.appendChild(painel);
+    document.body.appendChild(fundo);
+  });
+}
 </script>
 
 <script>
